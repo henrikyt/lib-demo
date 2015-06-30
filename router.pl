@@ -9,6 +9,7 @@ use JSON;
 use CGI;
 use Graph::Undirected;
 use Graph::D3;
+use Encode;
 
 print qq(Content-type: application/json\n\n);
 
@@ -21,7 +22,8 @@ my $json_text = do {
    <$json_fh>
 };
 my $json = JSON->new;
-our $db = $json->decode($json_text);
+$json = $json->utf8(1);
+our $db = $json->decode(encode('utf8',$json_text));
 ####
 
 ##GET VARS##
@@ -35,7 +37,6 @@ our @path=$selected;
 ####
 
 our $g0 = Graph::Undirected->new;
-our @visited;
 our @unvisited;
 
 foreach (@{$db->{nodes}}) {
@@ -44,11 +45,9 @@ foreach (@{$db->{nodes}}) {
 }
 
 @unvisited = grep { !/$selected/ } @unvisited;
-
 foreach (@{$db->{edges}}) {
     $g0->add_weighted_edge($_->{start},$_->{end},$weights{$_->{'color'}});
     $g0->set_edge_attribute($_->{start},$_->{end},'value',$weights{$_->{'color'}});
-
 }
 
 while(scalar @unvisited > 0){#scalar $g0->vertices){
@@ -87,6 +86,5 @@ sub move{
     push(@path,@newpath);
     @unvisited = grep { !/$near/ } @unvisited;
     $total += $val;
-    $val=-1;
     return $near;
 }
