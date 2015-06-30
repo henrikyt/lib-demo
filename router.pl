@@ -1,9 +1,11 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
- 
-use JSON qw( );
-use lib qw(..);
+
+use FindBin qw($Bin);
+use lib "$Bin/lib/";
+
+use JSON;
 use CGI;
 use Graph::Undirected;
 use Graph::D3;

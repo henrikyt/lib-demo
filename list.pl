@@ -2,11 +2,12 @@
 
 use strict;
 use warnings;
+use FindBin qw($Bin);
+use lib "$Bin/lib/";
+use JSON;
+
 
 print qq(Content-type: application/json\n\n);
-
-use JSON qw( );
-use lib qw(..);
 
 ##DB##
 my $filename = 'db.json';
