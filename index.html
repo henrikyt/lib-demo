@@ -1,0 +1,220 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <title>lib-demo</title>
+    <style type="text/css" media="screen">
+
+        body {
+            margin-left: auto;
+            margin-right: auto;
+            width: 90%;
+            background-color: aliceblue;
+        }
+
+        .node {
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-opacity: .6;
+        }
+
+        #inputs input[type=button] {
+            border-radius: 10px;
+
+        }
+
+        #inputs select {
+            border-radius: 10px;
+            margin-right: 5px;
+        }
+
+        #inputs input[type=text] {
+            width: 50px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .location {
+            border-radius: 10px;
+            background-color: darkseagreen;
+            height: 10px;
+            padding: 5px;
+            margin: 5px;
+            text-align: center;
+            display: inline-block;
+            line-height: 7px;
+
+        }
+
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js" charset="utf-8"></script>
+
+    <script type="application/javascript">
+
+        var drawGraph;
+
+        function startUp() {
+            listLibs();
+        }
+
+        function isInt(value) {
+            return !isNaN(value) &&
+                    parseInt(Number(value)) == value && !isNaN(parseInt(value, 10));
+        }
+
+        function executeRoute() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function () {
+                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                    graph = JSON.parse(xmlhttp.responseText);
+                    document.getElementById('total').value = graph.total;
+
+                    // TODO: animate path in the SVG instead
+                    var pathdiv = document.getElementById('route');
+                    pathdiv.innerHTML = "";
+                    for (var i in graph.path) {
+                        var e = document.createElement('div');
+                        e.setAttribute('class', 'location')
+                        e.appendChild(document.createTextNode(graph.path[i]));
+                        pathdiv.appendChild(e);
+                        if (i != graph.path.length-1)
+                            pathdiv.appendChild(document.createTextNode(">"));
+                    }
+
+                    var width = 1000, height = 600;
+                    var color = d3.scale.category20();
+                    var force = d3.layout.force()
+                            .charge(-500)
+                            .linkDistance(60)
+                            .size([width, height]);
+                    d3.select("svg").remove();
+                    var svg = d3.select("body")
+                            .append("svg")
+                            .attr("width", width)
+                            .attr("height", height);
+
+                    drawGraph = function (graph) {
+
+                        force
+                                .nodes(graph.nodes)
+                                .links(graph.links)
+                                .start();
+
+                        var link = svg.selectAll(".link")
+                                .data(graph.links)
+                                .enter().append("line")
+                                .attr("class", "link")
+                                .style("stroke-width", function (d) {
+                                    return Math.sqrt(d.value);
+                                })
+                                .style("stroke", function (d) {
+                                    if (d.value == document.getElementById('red').value)
+                                        return "red";
+                                    else if (d.value == document.getElementById('green').value)
+                                        return "green";
+                                    else if (d.value == document.getElementById('blue').value)
+                                        return "blue";
+                                });
+
+                        var gnodes = svg.selectAll('g.gnode')
+                                .data(graph.nodes)
+                                .enter()
+                                .append('g')
+                                .classed('gnode', true);
+
+                        var node = gnodes.append("circle")
+                                .attr("class", "node")
+                                .attr("r", 5)
+                                .style("fill", function (d) {
+                                    return color(d.group);
+                                })
+                                .call(force.drag);
+
+                        var labels = gnodes.append("text")
+                                .text(function (d) {
+                                    return d.name;
+                                });
+
+                        force.on("tick", function () {
+                            link.attr("x1", function (d) {
+                                return d.source.x;
+                            })
+                                    .attr("y1", function (d) {
+                                        return d.source.y;
+                                    })
+                                    .attr("x2", function (d) {
+                                        return d.target.x;
+                                    })
+                                    .attr("y2", function (d) {
+                                        return d.target.y;
+                                    });
+
+                            gnodes.attr("transform", function (d) {
+                                return 'translate(' + [d.x, d.y] + ')';
+                            });
+
+
+                        });
+                    };
+
+                    drawGraph(graph);
+                    document.getElementById('route').disabled = false;
+                }
+            }
+
+
+            var start = document.getElementById('libs');
+            start = start.options[start.selectedIndex].text;
+            if (!isInt(document.getElementById('red').value) || !isInt(document.getElementById('green').value) || !isInt(document.getElementById('blue').value)) {
+                alert("Minutes must be INT");
+                exit();
+            }
+            xmlhttp.open("GET", "router.pl?start=" + start + "&red=" + document.getElementById('red').value + "&green=" + document.getElementById('green').value + "&blue=" + document.getElementById('blue').value, true);
+            xmlhttp.send();
+
+        }
+
+
+        function showRoute() {
+            var e = drawGraph.force.nodes;
+        }
+
+        function listLibs() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function () {
+                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                    var select = document.getElementById('libs');
+                    var data = JSON.parse(xmlhttp.responseText)
+                    for (var i in data.nodes) {
+                        var opt = document.createElement("option");
+                        opt.appendChild(document.createTextNode(data.nodes[i]));
+                        select.appendChild(opt);
+                    }
+                }
+            }
+            xmlhttp.open("GET", "list.pl", true);
+            xmlhttp.send();
+        }
+
+    </script>
+</head>
+<body onload="startUp()">
+<div id="inputs">
+    Red line: <input id="red" type="text"/>
+    Green line: <input id="green" type="text"/>
+    Blue line: <input id="blue" type="text"/>
+    Total time: <input id="total" type="text" disabled="true"/>
+    Start from: <select id="libs"/> <input onclick="executeRoute()" type="button" value="Submit"/>
+    <input id="routetotal" onclick="showRoute()" type="button" value="Show route" disabled="true"/>
+
+    <div id="route"></div>
+</div>
+</body>
+</html>
+
