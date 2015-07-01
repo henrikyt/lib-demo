@@ -1,4 +1,3 @@
 ~2h: Setting up virtual machine, studying libraries (selected Graph, Graph::D3, D3.js)
 ~4h: Hacking with Perl (lot of rewriting)
 ~2h: Javascript + UI
-~2h: Bug hunting
